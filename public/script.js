@@ -1,4 +1,4 @@
-ID = "http://localhost:3000/request";
+ID = "https://g15id21myf.execute-api.eu-north-1.amazonaws.com/request";
 document.getElementById("postBtn").addEventListener("click", function () {
   // Example HTTPS POST request using fetch
   fetch(ID, {
