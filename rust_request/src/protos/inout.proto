@@ -1,0 +1,12 @@
+syntax = "proto3";
+// edition = "2023";
+
+package inout;
+
+message In {
+  string code = 1;
+}
+
+message Out {
+  string response = 1;
+}
