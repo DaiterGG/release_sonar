@@ -10,21 +10,35 @@ Globals:
   Function:
     Timeout: 3
 
+
 Resources:
+  ApiGatewayApi:
+    Type: AWS::Serverless::Api
+    Properties:
+      StageName: Prod
+      Cors:
+        AllowOrigins: "*"
+        AllowHeaders: ['Content-Type']
+        AllowMethods: ['GET', 'POST', 'OPTIONS']
   HelloWorldFunction:
     Type: AWS::Serverless::Function
     Properties:
       CodeUri: app/
-      Handler: app.lambda_handler
+      Handler: app.cors_handler
       Runtime: python3.14
       Architectures:
         - x86_64
       Events:
+        Cors:
+          Type: Api
+          Properties:
+            Path: /request
+            Method: OPTIONS
         HelloWorld:
           Type: Api
           Properties:
             Path: /request
-            Method: get
+            Method: POST
 
 Outputs:
   HelloWorldApi:

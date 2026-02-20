@@ -2,7 +2,7 @@
   "body": "{\"message\": \"foo\"}",
   "resource": "/hello",
   "path": "/hello",
-  "httpMethod": "GET",
+  "httpMethod": "POST",
   "isBase64Encoded": false,
   "queryStringParameters": {
     "foo": "bar"
