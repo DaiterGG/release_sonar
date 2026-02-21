@@ -36,4 +36,5 @@ tonic-build = "0.14.5"
 tonic-prost-build = "0.14.5"
 
 [features]
+default = ["browser-init"]
 browser-init = ["axum", "axum-extra", "cookie"]

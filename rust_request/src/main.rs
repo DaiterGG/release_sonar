@@ -1,3 +1,4 @@
+mod request;
 mod service;
 pub mod hello_world {
     tonic::include_proto!("inout");
@@ -11,8 +12,8 @@ async fn main() {
         browser_init::integrate().await;
         return;
     }
-    let code = "hi".to_string();
-    let res = service::new_releases_list(3, code);
+    println!("healthy");
+    // let res = service::new_releases_list(3, "testcode");
 }
 #[cfg(feature = "browser-init")]
 mod browser_init {
@@ -68,7 +69,7 @@ mod browser_init {
     async fn after_login(
         jar: CookieJar,
         Query(params): Query<CallbackResponse>,
-    ) -> Result<(), String> {
+    ) -> Result<String, String> {
         let state = jar.get("spotify_auth_state").map(|c| c.value().to_string());
         if state.is_none() {
             return Err("No state in cookie".to_string());
@@ -85,7 +86,8 @@ mod browser_init {
         }
         let code = params.code.unwrap();
 
-        println!("{}", service::new_releases_list(3, code).await?);
-        Ok(())
+        let res = service::new_releases_list(3, code).await?;
+        println!("{}", res);
+        Ok(res)
     }
 }
