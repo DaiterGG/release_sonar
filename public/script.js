@@ -80,7 +80,7 @@ async function handleCallback() {
         }
         const tokens = await response.json();
         console.log('Tokens received:', tokens);
-        window.location.href = '/dashboard.html';
+        window.location.href = '/';
     } catch (error) {
         displayError(`Failed to exchange code: ${error.message}`);
     }
@@ -95,7 +95,7 @@ function displayMessage(message) {
     document.body.innerHTML = `<div style="padding: 2rem;">${message}</div>`;
 }
 
-if (window.location.pathname.includes('callback.html')) {
+if (window.location.pathname.includes('callback')) {
     handleCallback();
 } else {
     document.getElementById('login-button').addEventListener('click', initiateLogin);
