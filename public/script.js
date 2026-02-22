@@ -78,8 +78,6 @@ async function handleCallback() {
         if (!response.ok) {
             throw new Error(`Backend returned ${response.status}`);
         }
-        const tokens = await response.json();
-        console.log('Tokens received:', tokens);
         window.location.href = '/';
     } catch (error) {
         displayError(`Failed to exchange code: ${error.message}`);
