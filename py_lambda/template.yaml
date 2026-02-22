@@ -9,6 +9,9 @@ Description: >
 Globals:
   Function:
     Timeout: 3
+    # Environment:
+    #   Variables:
+    #     QUEUE_URL: https://sqs.us-east-1.amazonaws.com/748887400437/InvokeQueue.fifo
 
 
 Resources:
@@ -17,36 +20,33 @@ Resources:
     Properties:
       StageName: Prod
       Cors:
-        AllowOrigins: "*"
-        AllowHeaders: ['Content-Type']
-        AllowMethods: ['GET', 'POST', 'OPTIONS']
-  HelloWorldFunction:
+        AllowMethods: "'POST,GET,OPTIONS'"
+        AllowHeaders: "'*'"
+        AllowOrigin: "'https://daitergg.github.io'"
+        MaxAge: "'600'"
+  RequestFunction:
     Type: AWS::Serverless::Function
     Properties:
       CodeUri: app/
-      Handler: app.cors_handler
+      Handler: app.lambda_handler
       Runtime: python3.14
       Architectures:
         - x86_64
       Events:
-        Cors:
+        RequestEvent:
           Type: Api
           Properties:
+            RestApiId: !Ref ApiGatewayApi
             Path: /request
-            Method: OPTIONS
-        HelloWorld:
-          Type: Api
-          Properties:
-            Path: /request
-            Method: POST
+            Method: post
 
 Outputs:
-  HelloWorldApi:
-    Description: "API Gateway endpoint URL for Prod stage for Hello World function"
-    Value: !Sub "https://${ServerlessRestApi}.execute-api.${AWS::Region}.${AWS::URLSuffix}/Prod/hello/"
-  HelloWorldFunction:
+  ReleaseSonarApi:
+    Description: "API Gateway endpoint URL for Prod stage for Request function"
+    Value: !Sub "https://${ApiGatewayApi}.execute-api.${AWS::Region}.${AWS::URLSuffix}/Prod/request/"
+  ReleaseSonarFunction:
     Description: "Lambda Function ARN"
-    Value: !GetAtt HelloWorldFunction.Arn
+    Value: !GetAtt RequestFunction.Arn
   RequestFunctionIamRole:
     Description: "Implicit IAM Role created for request function"
-    Value: !GetAtt HelloWorldFunctionRole.Arn
+    Value: !GetAtt RequestFunctionRole.Arn
