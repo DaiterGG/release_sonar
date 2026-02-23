@@ -3,6 +3,7 @@ const REDIRECT_URI = 'https://daitergg.github.io/release_sonar/callback';
 const SCOPE = 'user-library-read';
 
 const SERVER_URL = 'https://0tqhj2esqh.execute-api.eu-north-1.amazonaws.com/Prod/';
+const SERVER_URL_POLL = SERVER_URL + '/poll';
 
 const STATE_CHARSET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
 const STATE_LENGTH = 16;
@@ -100,8 +101,8 @@ function startPolling() {
 
     const intervalId = setInterval(async () => {
         try {
-            const response = await fetch(SERVER_URL, {
-                method: 'GET',
+            const response = await fetch(SERVER_URL_POLL, {
+                method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     code: code,
