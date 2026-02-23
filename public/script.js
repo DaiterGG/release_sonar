@@ -31,7 +31,6 @@ function initiateLogin() {
     sessionStorage.setItem('spotify_auth_state', state);
 
     const storedState = sessionStorage.getItem('spotify_auth_state');
-    print(storedState)
 
     const authUrl = new URL('https://accounts.spotify.com/authorize');
     authUrl.searchParams.set('response_type', 'code');
@@ -114,7 +113,6 @@ function startPolling() {
                 clearInterval(intervalId);
                 sessionStorage.removeItem('spotify_code');
                 sessionStorage.removeItem('spotify_stamp');
-                window.location.href = '/release_sonar';
             }
             const data = await response.json();
 
