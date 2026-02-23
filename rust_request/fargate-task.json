@@ -1,7 +1,7 @@
 {
     "family": "sonar-fargate",
     "networkMode": "awsvpc",
-    
+    "taskRoleArn": "arn:aws:iam::748887400437:role/ecsTaskArn",
     "executionRoleArn": "arn:aws:iam::748887400437:role/service-role/ecsTaskExecutionRole",
     "containerDefinitions": [
         {

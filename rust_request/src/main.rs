@@ -1,31 +1,35 @@
 use std::env;
 
-use anyhow::{ Result};
+use anyhow::Result;
 
 use crate::db_manager::DBManager;
 
+mod db_manager;
 mod request;
 mod service;
-mod db_manager;
-// pub mod hello_world {
-//     tonic::include_proto!("inout");
-// }
 const PORT: &str = "3000";
 
 #[tokio::main]
 async fn main() -> Result<()> {
+    println!("healthy launch");
     #[cfg(feature = "browser-init")]
     {
         browser_init::integrate().await;
         return Ok(());
     }
-    println!("healthy launch");
-    let db = DBManager::init().await;
-    let code = env::var("LAUNCH_PARAM_USER_CODE").expect("invalid init from lambda");
+
+    let code = env::var("LAUNCH_PARAM_USER_CODE").expect("invalid init code from lambda");
+    let time = env::var("LAUNCH_PARAM_TIME").expect("invalid init time from lambda");
     println!("code received :{code}");
+    let job_id = format!("{}{}", time, code);
+    let db = DBManager::init(job_id).await;
+
     let res = service::new_releases_list(3, code).await?;
 
+    println!("result sending :{}", res);
     db.send_result(res).await?;
+    println!("result sent");
+
     Ok(())
 }
 #[cfg(feature = "browser-init")]

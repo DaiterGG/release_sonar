@@ -9,7 +9,7 @@ use std::{
 };
 use tokio::{sync::Semaphore, task::JoinSet};
 
-use crate::request::{ NewTracksRequest, UserTracks };
+use crate::request::{NewTracksRequest, UserTracks};
 
 pub const CHARSET_STATE: &str = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
 pub static CLIENT_DATA: LazyLock<IdSecret> = LazyLock::new(|| {
@@ -17,7 +17,7 @@ pub static CLIENT_DATA: LazyLock<IdSecret> = LazyLock::new(|| {
     serde_json::from_str::<IdSecret>(&txt).unwrap()
 });
 pub const REQUEST_STEP: usize = 50;
-pub const PRINT_NUM_OF_TRACKS: usize = 20;
+pub const NUM_OF_TRACKS_RESULT: usize = 20;
 pub const TRACK_PER_ARTIST: usize = 3;
 
 #[derive(Serialize, Deserialize)]
@@ -72,7 +72,7 @@ impl Track {
             name,
             // track_num,
             // uri,
-            date,
+            date: Date { naive: date },
             artists,
         };
         Ok(item)
@@ -83,12 +83,25 @@ impl Track {
 pub struct Artist {
     name: String,
 }
+
+#[derive(Serialize)]
 pub struct TrackItem {
     name: String,
     // track_num: TracksNum,
     // uri: String,
-    date: NaiveDate,
+    date: Date,
     artists: String,
+}
+pub struct Date {
+    pub naive: NaiveDate,
+}
+impl Serialize for Date {
+    fn serialize<S>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        serializer.serialize_str(&self.naive.to_string())
+    }
 }
 
 pub async fn new_releases_list(min_tracks: i32, code: String) -> Result<String> {
@@ -98,7 +111,7 @@ pub async fn new_releases_list(min_tracks: i32, code: String) -> Result<String> 
 
     let mut form = HashMap::new();
     form.insert("code".to_string(), code.to_string());
-    form.insert("redirect_uri".to_string(), redir_uri.to_string());
+    form.insert("redirect_uri".to_string(), redir_uri);
     form.insert("grant_type".to_string(), "authorization_code".to_string());
 
     println!("{}", CLIENT_DATA.client_id);
@@ -120,6 +133,7 @@ pub async fn new_releases_list(min_tracks: i32, code: String) -> Result<String> 
 
     if !res.status().is_success() {
         println!("Full response: {:?}\n", res);
+        println!("Full body: {:?}\n", res.text().await?);
         bail!("error in console");
     }
 
@@ -167,22 +181,18 @@ pub async fn new_releases_list(min_tracks: i32, code: String) -> Result<String> 
         tracks.append(&mut item);
     }
 
-    tracks.sort_unstable_by(|a, b| b.date.cmp(&a.date));
+    tracks.sort_unstable_by(|a, b| b.date.naive.cmp(&a.date.naive));
 
-    // NOTE: encode result
-    let mut result = "".to_string();
-    let limit = usize::min(PRINT_NUM_OF_TRACKS, tracks.len());
-    for (i, track) in tracks.iter().enumerate().take(limit) {
-        let res = format!(
-            "{}. {} - {}, {}\n",
-            i + 1,
-            track.artists,
-            track.name,
-            track.date
-        );
-        result.push_str(&res);
+    if tracks.len() > NUM_OF_TRACKS_RESULT {
+        tracks.drain(NUM_OF_TRACKS_RESULT..tracks.len());
     }
-    Ok(result.to_string())
+    #[derive(Serialize)]
+    pub struct Result {
+        pub tracks: Vec<TrackItem>,
+    }
+    let result = Result { tracks };
+
+    Ok(serde_json::to_string(&result)?)
 }
 
 type Collect = Arc<Mutex<HashMap<String, i32>>>;

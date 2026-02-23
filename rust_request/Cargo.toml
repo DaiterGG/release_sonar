@@ -31,7 +31,7 @@ axum-extra = { version = "0.10.1", features = ["cookie"] , optional = true }
 axum = { version = "0.8.4", optional = true }
 anyhow = "1.0.102"
 aws-sdk-dynamodb = "1.106.0"
-aws-config = "1.8.14"
+aws-config = { version = "1.8.14", features = ["behavior-version-latest"] }
 rand = "0.10.0"
 
 [build-dependencies]
