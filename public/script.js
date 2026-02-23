@@ -130,7 +130,7 @@ function startPolling() {
             console.error('Polling error:', error);
             // TODO: stop polling on persistent errors
         }
-    }, 5000);
+    }, 10000);
 }
 
 
