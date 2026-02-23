@@ -73,7 +73,7 @@ async function handleCallback() {
         const response = await fetch(TOKEN_EXCHANGE_URL, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ code }),
+            body: code,
         });
         if (!response.ok) {
             throw new Error(`Backend returned ${response.status}`);
@@ -87,10 +87,6 @@ async function handleCallback() {
 function displayError(message) {
     console.error(message);
     document.body.innerHTML = `<div style="color: red; padding: 2rem;">${message}</div>`;
-}
-
-function displayMessage(message) {
-    document.body.innerHTML = `<div style="padding: 2rem;">${message}</div>`;
 }
 
 if (window.location.pathname.includes('callback')) {
