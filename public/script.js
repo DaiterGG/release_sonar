@@ -7,7 +7,6 @@ const TOKEN_EXCHANGE_URL = 'https://0tqhj2esqh.execute-api.eu-north-1.amazonaws.
 const STATE_CHARSET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
 const STATE_LENGTH = 16;
 
-// Generate a random string of given length from charset
 function generateRandomString(length, charset) {
     let result = '';
     const values = new Uint8Array(length);
@@ -18,7 +17,6 @@ function generateRandomString(length, charset) {
     return result;
 }
 
-// Parse query string into an object
 function getQueryParams() {
     const params = new URLSearchParams(window.location.search);
     const obj = {};
@@ -73,7 +71,10 @@ async function handleCallback() {
         const response = await fetch(TOKEN_EXCHANGE_URL, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: code,
+            body: JSON.stringify({ 
+                code: code,
+                timeepoch: Date.now()
+            }),
         });
         if (!response.ok) {
             throw new Error(`Backend returned ${response.status}`);
@@ -81,6 +82,7 @@ async function handleCallback() {
         window.location.href = '/release_sonar';
     } catch (error) {
         displayError(`Failed to exchange code: ${error.message}`);
+        window.location.href = '/release_sonar';
     }
 }
 
