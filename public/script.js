@@ -78,7 +78,7 @@ async function handleCallback() {
         if (!response.ok) {
             throw new Error(`Backend returned ${response.status}`);
         }
-        window.location.href = '/';
+        window.location.href = '/release_sonar';
     } catch (error) {
         displayError(`Failed to exchange code: ${error.message}`);
     }
