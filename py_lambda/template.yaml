@@ -9,9 +9,9 @@ Description: >
 Globals:
   Function:
     Timeout: 3
-    # Environment:
-    #   Variables:
-    #     QUEUE_URL: https://sqs.us-east-1.amazonaws.com/748887400437/InvokeQueue.fifo
+    Environment:
+      Variables:
+        QUEUE_URL: https://sqs.eu-north-1.amazonaws.com/748887400437/from_lamda.fifo
 
 
 Resources:
@@ -23,12 +23,12 @@ Resources:
         AllowMethods: "'POST,GET,OPTIONS'"
         AllowHeaders: "'*'"
         AllowOrigin: "'https://daitergg.github.io'"
-        MaxAge: "'600'"
-  RequestFunction:
+        MaxAge: "'3600'"
+  PollFunction:
     Type: AWS::Serverless::Function
     Properties:
       CodeUri: app/
-      Handler: app.lambda_handler
+      Handler: app.lambda_handler_poll
       Runtime: python3.14
       Architectures:
         - x86_64
@@ -37,7 +37,22 @@ Resources:
           Type: Api
           Properties:
             RestApiId: !Ref ApiGatewayApi
-            Path: /request
+            Path: /poll
+            Method: post
+  PostFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: app/
+      Handler: app.lambda_handler_post
+      Runtime: python3.14
+      Architectures:
+        - x86_64
+      Events:
+        RequestEvent:
+          Type: Api
+          Properties:
+            RestApiId: !Ref ApiGatewayApi
+            Path: /
             Method: post
 
 Outputs:
@@ -46,7 +61,13 @@ Outputs:
     Value: !Sub "https://${ApiGatewayApi}.execute-api.${AWS::Region}.${AWS::URLSuffix}/Prod/request/"
   ReleaseSonarFunction:
     Description: "Lambda Function ARN"
-    Value: !GetAtt RequestFunction.Arn
+    Value: !GetAtt PostFunction.Arn
   RequestFunctionIamRole:
     Description: "Implicit IAM Role created for request function"
-    Value: !GetAtt RequestFunctionRole.Arn
+    Value: !GetAtt PostFunctionRole.Arn
+  ReleaseSonarFunction:
+    Description: "Lambda Function ARN"
+    Value: !GetAtt PollFunction.Arn
+  RequestFunctionIamRole:
+    Description: "Implicit IAM Role created for request function"
+    Value: !GetAtt PollFunctionRole.Arn

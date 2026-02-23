@@ -2,55 +2,47 @@ import json
 import boto3
 import os
 
-def lambda_handler(event, context):
-    client = boto3.client('ecs')
+sqs = boto3.client('sqs')
+dynamodb = boto3.resource('dynamodb')
+table = dynamodb.Table('rust-cache')
 
-    # Replace with your cluster name
-    cluster_name = 'fargate-sonar'
-    # Replace with the task definition family and revision (or just family to use the latest)
-    task_definition = 'sonar-fargate:8'
+def lambda_handler_poll(event, _):
+    code_time = event.get("body","error receiving user code")
+    print("code and time is:")
+    print(code_time)
 
-    overrides = {
-        'containerOverrides': [
-            {
-                'name': 'daiterdg/release_sonar_rust:latest',
-                'environment': [
-                    {
-                        'name': 'LAUNCH_PARAM_USER_CODE',
-                        'value': 'Hello from Lambda!'
-                    }
-                ]
-            }
-        ]
-    }
 
-    response = client.run_task(
-        cluster=cluster_name,
-        launchType='FARGATE',
-        taskDefinition=task_definition,
-        overrides=overrides,
-        count=1,
-        platformVersion='LATEST',
-        networkConfiguration={
-            'awsvpcConfiguration': {
-                'subnets': [
-                    'subnet-095e23bfdfda7b24f',
-                ],
-                'securityGroups': [
-                    'sg-055134a9b7ae3ee1f'
-                ],
-                'assignPublicIp': 'ENABLED'
-            }
-        }
-    )
-    
-    print("responce from ecs launch");
-    print(response);
+    response = table.get_item(Key={
+        "job_id": code_time
+        }).json()
+    print(response)
+
 
     return {
         "statusCode": 200,
         "headers": {
             "Access-Control-Allow-Origin": "https://daitergg.github.io"
         },
-        'body': 'Task triggered: ' + response
+        "body": response
+    }
+def lambda_handler_post(event, _):
+    code_time = event.get("body","error receiving user code")
+    print("code and time is:")
+    print(code_time)
+    queue_url = os.environ['QUEUE_URL']
+    response = sqs.send_message(
+        QueueUrl=queue_url,
+        MessageBody=code_time,
+        MessageGroupId='invoke',
+        MessageDeduplicationId='invoke',
+    )
+    
+    print(f"Message sent; MessageId: {response['MessageId']}")
+
+    return {
+        "statusCode": 200,
+        "headers": {
+            "Access-Control-Allow-Origin": "https://daitergg.github.io"
+        },
+        "body": "Message sent to SQS"
     }
