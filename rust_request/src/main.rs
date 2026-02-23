@@ -1,19 +1,32 @@
+use std::env;
+
+use anyhow::{ Result};
+
+use crate::db_manager::DBManager;
+
 mod request;
 mod service;
-pub mod hello_world {
-    tonic::include_proto!("inout");
-}
+mod db_manager;
+// pub mod hello_world {
+//     tonic::include_proto!("inout");
+// }
 const PORT: &str = "3000";
 
 #[tokio::main]
-async fn main() {
+async fn main() -> Result<()> {
     #[cfg(feature = "browser-init")]
     {
         browser_init::integrate().await;
-        return;
+        return Ok(());
     }
-    println!("healthy");
-    // let res = service::new_releases_list(3, "testcode");
+    println!("healthy launch");
+    let db = DBManager::init().await;
+    let code = env::var("LAUNCH_PARAM_USER_CODE").expect("invalid init from lambda");
+    println!("code received :{code}");
+    let res = service::new_releases_list(3, code).await?;
+
+    db.send_result(res).await?;
+    Ok(())
 }
 #[cfg(feature = "browser-init")]
 mod browser_init {
@@ -86,7 +99,7 @@ mod browser_init {
         }
         let code = params.code.unwrap();
 
-        let res = service::new_releases_list(3, code).await?;
+        let res = service::new_releases_list(3, code).await.unwrap();
         println!("{}", res);
         Ok(res)
     }

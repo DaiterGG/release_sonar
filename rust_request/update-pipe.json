@@ -1,0 +1,37 @@
+{
+    "Name": "invoke-pipe",
+    "RoleArn": "arn:aws:iam::748887400437:role/service-role/Amazon_EventBridge_Pipe_invoke-pipe_c72d64c6",
+    "TargetParameters": {
+        "EcsTaskParameters": {
+            "TaskDefinitionArn": "arn:aws:ecs:eu-north-1:748887400437:task-definition/sonar-fargate",
+            "TaskCount": 1,
+            "LaunchType": "FARGATE",
+            "NetworkConfiguration": {
+                "awsvpcConfiguration": {
+                    "Subnets": [
+                        "subnet-095e23bfdfda7b24f"
+                    ],
+                    "SecurityGroups": [
+                        "sg-055134a9b7ae3ee1f"
+                    ],
+                    "AssignPublicIp": "ENABLED"
+                }
+            },
+            "EnableECSManagedTags": true,
+            "EnableExecuteCommand": false,
+            "Overrides": {
+                "ContainerOverrides": [
+                    {
+                        "Name": "sonar_request",
+                        "Environment": [
+                            {
+                                "name": "LAUNCH_PARAM_USER_CODE",
+                                "value": "$.body"
+                            }
+                        ]
+                    }
+                ]
+            }
+        }
+    }
+}

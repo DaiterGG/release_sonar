@@ -16,4 +16,5 @@ RUN cargo clean
 FROM alpine
 COPY --from=builder /usr/local/cargo/bin/rust_request /usr/local/bin
 EXPOSE 3000
+ENV SQS_URL="https://sqs.us-east-1.amazonaws.com/748887400437/InvokeQueue.fifo"
 ENTRYPOINT rust_request

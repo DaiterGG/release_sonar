@@ -1,3 +1,4 @@
+use anyhow::{Result, bail};
 use chrono::NaiveDate;
 use reqwest::{self, Client};
 use serde::{Deserialize, Serialize};
@@ -5,15 +6,10 @@ use serde_json::Value;
 use std::{
     collections::HashMap,
     sync::{Arc, LazyLock, Mutex},
-    time::Duration,
 };
-use tokio::{sync::Semaphore, task::JoinSet, time::sleep};
-use url::Url;
+use tokio::{sync::Semaphore, task::JoinSet};
 
-use crate::{
-    PORT,
-    request::{self, NewTracksRequest, UserTracks},
-};
+use crate::request::{ NewTracksRequest, UserTracks };
 
 pub const CHARSET_STATE: &str = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
 pub static CLIENT_DATA: LazyLock<IdSecret> = LazyLock::new(|| {
@@ -32,10 +28,6 @@ pub struct TockenResponse {
 pub struct IdSecret {
     pub client_id: String,
     pub client_secret: String,
-}
-#[derive(Deserialize)]
-struct Res {
-    list: String,
 }
 #[derive(Serialize, Deserialize)]
 pub struct NewTracks {
@@ -99,10 +91,10 @@ pub struct TrackItem {
     artists: String,
 }
 
-pub async fn new_releases_list(min_tracks: i32, code: String) -> Result<String, String> {
+pub async fn new_releases_list(min_tracks: i32, code: String) -> Result<String> {
     let client = reqwest::Client::new();
 
-    let redir_uri = format!("http://127.0.0.1:{}/logincallback", PORT);
+    let redir_uri = "https://daitergg.github.io/release_sonar/callback".to_string();
 
     let mut form = HashMap::new();
     form.insert("code".to_string(), code.to_string());
@@ -118,8 +110,7 @@ pub async fn new_releases_list(min_tracks: i32, code: String) -> Result<String, 
             Some(CLIENT_DATA.client_secret.clone()),
         )
         .form(&form)
-        .build()
-        .map_err(|e| e.to_string())?;
+        .build()?;
 
     println!("Requesting token");
 
@@ -129,7 +120,7 @@ pub async fn new_releases_list(min_tracks: i32, code: String) -> Result<String, 
 
     if !res.status().is_success() {
         println!("Full response: {:?}\n", res);
-        return Err("error in console".to_string());
+        bail!("error in console");
     }
 
     let body = res.text().await.unwrap();
@@ -195,7 +186,7 @@ pub async fn new_releases_list(min_tracks: i32, code: String) -> Result<String, 
 }
 
 type Collect = Arc<Mutex<HashMap<String, i32>>>;
-async fn get_all_artists(token: &str, client: &Client) -> Result<HashMap<String, i32>, String> {
+async fn get_all_artists(token: &str, client: &Client) -> Result<HashMap<String, i32>> {
     let test_request = UserTracks::new(client, token, 0);
     let res = test_request
         .make_request_with_retry()

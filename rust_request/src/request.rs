@@ -1,6 +1,5 @@
-use std::{collections::HashMap, time::Duration};
+use std::{ time::Duration};
 
-use hyper::client;
 use reqwest::Client;
 use serde_json::Value;
 use tokio::time::sleep;
