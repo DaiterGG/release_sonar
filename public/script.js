@@ -30,6 +30,9 @@ function initiateLogin() {
     const state = generateRandomString(STATE_LENGTH, STATE_CHARSET);
     sessionStorage.setItem('spotify_auth_state', state);
 
+    const storedState = sessionStorage.getItem('spotify_auth_state');
+    print(storedState)
+
     const authUrl = new URL('https://accounts.spotify.com/authorize');
     authUrl.searchParams.set('response_type', 'code');
     authUrl.searchParams.set('client_id', CLIENT_ID);
@@ -86,8 +89,7 @@ async function handleCallback() {
 
         window.location.href = '/release_sonar';
     } catch (error) {
-        displayError(`Failed to exchange code: ${error.message}`);
-        window.location.href = '/release_sonar';
+        document.body.innerHTML = `<div style="color: red; padding: 2rem;">Failed to exchange code: ${message}</div>`;
     }
 }
 
