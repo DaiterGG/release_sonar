@@ -2,7 +2,7 @@ const CLIENT_ID = '5816d7f999ca4a7390e154dbf20eee5b';
 const REDIRECT_URI = 'https://daitergg.github.io/release_sonar/callback';
 const SCOPE = 'user-library-read';
 
-const TOKEN_EXCHANGE_URL = 'https://0tqhj2esqh.execute-api.eu-north-1.amazonaws.com/Prod/request/';
+const SERVER_URL = 'https://0tqhj2esqh.execute-api.eu-north-1.amazonaws.com/Prod/';
 
 const STATE_CHARSET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
 const STATE_LENGTH = 16;
@@ -66,25 +66,72 @@ async function handleCallback() {
     }
 
     const code = params.code;
+    const time = Date.now();
 
     try {
-        const response = await fetch(TOKEN_EXCHANGE_URL, {
+        const response = await fetch(SERVER_URL, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ 
+            body: JSON.stringify({
                 code: code,
-                timeepoch: Date.now()
+                time: time
             }),
         });
         if (!response.ok) {
             throw new Error(`Backend returned ${response.status}`);
         }
+
+        sessionStorage.setItem('spotify_code', code);
+        sessionStorage.setItem('spotify_stamp', time.toString());
+
         window.location.href = '/release_sonar';
     } catch (error) {
         displayError(`Failed to exchange code: ${error.message}`);
         window.location.href = '/release_sonar';
     }
 }
+
+function startPolling() {
+    const code = sessionStorage.getItem('spotify_code');
+    const stamp = sessionStorage.getItem('spotify_stamp');
+
+    if (!code || !stamp) return;
+
+    const intervalId = setInterval(async () => {
+        try {
+            const response = await fetch(SERVER_URL, {
+                method: 'GET',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    code: code,
+                    time: stamp
+                }),
+            });
+            if (!response.ok) {
+                throw new Error(`Backend returned ${response.status}\n Try Again`);
+                clearInterval(intervalId);
+                sessionStorage.removeItem('spotify_code');
+                sessionStorage.removeItem('spotify_stamp');
+                window.location.href = '/release_sonar';
+            }
+            const data = await response.json();
+
+            if (data.job_state == "PROGRESS" ) {
+                // TODO: data.job_result to the front end as progress number
+            }
+            if (data.job_state == "DONE" ) {
+                clearInterval(intervalId);
+                sessionStorage.removeItem('spotify_code');
+                sessionStorage.removeItem('spotify_stamp');
+                // TODO: data.job_result to the front end
+            }
+        } catch (error) {
+            console.error('Polling error:', error);
+            // TODO: stop polling on persistent errors
+        }
+    }, 5000);
+}
+
 
 function displayError(message) {
     console.error(message);
@@ -95,4 +142,6 @@ if (window.location.pathname.includes('callback')) {
     handleCallback();
 } else {
     document.getElementById('login-button').addEventListener('click', initiateLogin);
+
+    startPolling(); //return if first session
 }
