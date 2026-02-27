@@ -85,7 +85,7 @@ async function handleCallback() {
         }
 
         sessionStorage.setItem('spotify_code', code);
-        sessionStorage.setItem('spotify_stamp', time.toString());
+        sessionStorage.setItem('spotify_expire_time', time.toString());
 
         window.location.href = '/release_sonar';
     } catch (error) {
@@ -96,9 +96,9 @@ async function handleCallback() {
 
 function startPolling() {
     const code = sessionStorage.getItem('spotify_code');
-    const stamp = sessionStorage.getItem('spotify_stamp');
+    const time = sessionStorage.getItem('spotify_expire_time');
 
-    if (!code || !stamp) return;
+    if (!code || !time) return;
 
     const intervalId = setInterval(async () => {
         try {
@@ -107,14 +107,14 @@ function startPolling() {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     code: code,
-                    time: stamp
+                    time: time
                 }),
             });
             if (!response.ok) {
                 throw new Error(`Backend returned ${response.status}\n Try Again`);
                 clearInterval(intervalId);
                 sessionStorage.removeItem('spotify_code');
-                sessionStorage.removeItem('spotify_stamp');
+                sessionStorage.removeItem('spotify_expire_time');
             }
             const data = await response.json();
 
@@ -124,7 +124,7 @@ function startPolling() {
             if (data.job_state == "DONE" ) {
                 clearInterval(intervalId);
                 sessionStorage.removeItem('spotify_code');
-                sessionStorage.removeItem('spotify_stamp');
+                sessionStorage.removeItem('spotify_expire_time');
                 document.body.innerHTML = `<div style="color: red; padding: 2rem;">Result: ${data.job_result}</div>`;
             }
         } catch (error) {
