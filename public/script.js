@@ -1,5 +1,6 @@
 const CLIENT_ID = '5816d7f999ca4a7390e154dbf20eee5b';
-const REDIRECT_URI = 'https://daitergg.github.io/release_sonar/callback';
+const URI = 'https://daitergg.github.io/release_sonar';
+const REDIRECT_URI = URI + '/callback';
 const SCOPE = 'user-library-read';
 
 const SERVER_URL = 'https://0tqhj2esqh.execute-api.eu-north-1.amazonaws.com/Prod/';
@@ -87,7 +88,7 @@ async function handleCallback() {
         sessionStorage.setItem('spotify_code', code);
         sessionStorage.setItem('spotify_expire_time', time.toString());
 
-        window.location.href = '/release_sonar?q=start_polling';
+        window.location.href = URI + '/release_sonar?q=start_polling';
     } catch (error) {
         document.body.innerHTML = `<div style="color: red; padding: 2rem;">Failed to exchange code</div>`;
         console.error('Polling error:', error);
