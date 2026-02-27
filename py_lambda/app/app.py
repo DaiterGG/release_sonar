@@ -1,4 +1,3 @@
-from concurrent.futures import Executor
 import json
 import boto3
 import os
@@ -10,26 +9,22 @@ table = dynamodb.Table('rust-cache')
 def lambda_handler_poll(event, _):
     code_time = json.loads(event.get("body","error receiving user code"))
     print("code and time is:")
-    print(code_time)
-
-
-    job_id = code_time['time']+ code_time['code']
 
     response = table.get_item(Key={
-        "job_id": job_id
+        "job_id": code_time['code'],
+        "job_stamp": code_time['time']
         })
-    print(response)
     try :
         item = response.get('Item')
         print(item)
     except Exception as e:
-        print(f"Error getting item: {e}")
+        print(f"Error getting item: {e}\n assuming entry is not created yet")
         return {
             "statusCode": 200,
             "headers": {
                 "Access-Control-Allow-Origin": "https://daitergg.github.io"
             },
-            "body":"PROGRESS"
+            "body":json.dumps({"job_status": "PROGRESS", "job_result": "0"})
         }
 
     return {

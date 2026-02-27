@@ -21,10 +21,9 @@ async fn main() -> Result<()> {
     let code = env::var("LAUNCH_PARAM_USER_CODE").expect("invalid init code from lambda");
     let time = env::var("LAUNCH_PARAM_TIME").expect("invalid init time from lambda");
     println!("code received :{code}");
-    let job_id = format!("{}{}", time, code);
-    let db = DBManager::init(job_id).await;
+    let db = DBManager::init(&code, time).await;
 
-    let res = service::new_releases_list(3, code).await?;
+    let res = service::new_releases_list(3, code, &db).await?;
 
     println!("result sending :{}", res);
     db.send_result(res).await?;
@@ -44,6 +43,7 @@ mod browser_init {
 
     use crate::{
         PORT,
+        db_manager::SendProgress,
         service::{self, CHARSET_STATE, CLIENT_DATA},
     };
 
@@ -103,8 +103,18 @@ mod browser_init {
         }
         let code = params.code.unwrap();
 
-        let res = service::new_releases_list(3, code).await.unwrap();
+        let res = service::new_releases_list(3, code, &TestDB {})
+            .await
+            .unwrap();
         println!("{}", res);
         Ok(res)
+    }
+
+    pub struct TestDB;
+
+    impl SendProgress for TestDB {
+        async fn send(&self, progress: i32) {
+            println!("progress :{progress}");
+        }
     }
 }

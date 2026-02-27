@@ -9,9 +9,11 @@ use std::{
 };
 use tokio::{sync::Semaphore, task::JoinSet};
 
-use crate::request::{NewTracksRequest, UserTracks};
+use crate::{
+    db_manager::SendProgress,
+    request::{NewTracksRequest, UserTracks},
+};
 
-pub const CHARSET_STATE: &str = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
 pub static CLIENT_DATA: LazyLock<IdSecret> = LazyLock::new(|| {
     let txt = String::from_utf8_lossy(include_bytes!("conf.json"));
     serde_json::from_str::<IdSecret>(&txt).unwrap()
@@ -104,7 +106,11 @@ impl Serialize for Date {
     }
 }
 
-pub async fn new_releases_list(min_tracks: i32, code: String) -> Result<String> {
+pub async fn new_releases_list(
+    min_tracks: i32,
+    code: String,
+    send_db: &impl SendProgress,
+) -> Result<String> {
     let client = reqwest::Client::new();
 
     let redir_uri = "https://daitergg.github.io/release_sonar/callback".to_string();

@@ -89,7 +89,8 @@ async function handleCallback() {
 
         window.location.href = '/release_sonar';
     } catch (error) {
-        document.body.innerHTML = `<div style="color: red; padding: 2rem;">Failed to exchange code: ${message}</div>`;
+        document.body.innerHTML = `<div style="color: red; padding: 2rem;">Failed to exchange code</div>`;
+        console.error('Polling error:', error);
     }
 }
 
@@ -118,13 +119,13 @@ function startPolling() {
             const data = await response.json();
 
             if (data.job_state == "PROGRESS" ) {
-                // TODO: data.job_result to the front end as progress number
+                document.body.innerHTML = `<div style="color: red; padding: 2rem;">In Progress: ${data.job_result}</div>`;
             }
             if (data.job_state == "DONE" ) {
                 clearInterval(intervalId);
                 sessionStorage.removeItem('spotify_code');
                 sessionStorage.removeItem('spotify_stamp');
-                // TODO: data.job_result to the front end
+                document.body.innerHTML = `<div style="color: red; padding: 2rem;">Result: ${data.job_result}</div>`;
             }
         } catch (error) {
             console.error('Polling error:', error);
