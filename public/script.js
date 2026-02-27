@@ -85,7 +85,7 @@ async function handleCallback() {
             throw new Error(`Backend returned ${response.status}`);
         }
 
-        sessionStorage.setItem('spotify_code', code);
+        sessionStorage.setItem('spotify_auth_state', code);
         sessionStorage.setItem('spotify_expire_time', time.toString());
 
         window.location.href = URI + '/release_sonar?q=start_polling';
@@ -96,7 +96,7 @@ async function handleCallback() {
 }
 
 function startPolling() {
-    const code = sessionStorage.getItem('spotify_code');
+    const code = sessionStorage.getItem('spotify_auth_state');
     const time = sessionStorage.getItem('spotify_expire_time');
 
     if (!code || !time) return;
@@ -114,7 +114,7 @@ function startPolling() {
             if (!response.ok) {
                 throw new Error(`Backend returned ${response.status}\n Try Again`);
                 clearInterval(intervalId);
-                sessionStorage.removeItem('spotify_code');
+                sessionStorage.removeItem('spotify_auth_state');
                 sessionStorage.removeItem('spotify_expire_time');
             }
             const data = await response.json();
@@ -124,7 +124,7 @@ function startPolling() {
             }
             if (data.job_state == "DONE" ) {
                 clearInterval(intervalId);
-                sessionStorage.removeItem('spotify_code');
+                sessionStorage.removeItem('spotify_auth_state');
                 sessionStorage.removeItem('spotify_expire_time');
                 document.body.innerHTML = `<div style="color: red; padding: 2rem;">Result: ${data.job_result}</div>`;
             }
