@@ -87,7 +87,7 @@ async function handleCallback() {
         sessionStorage.setItem('spotify_code', code);
         sessionStorage.setItem('spotify_expire_time', time.toString());
 
-        window.location.href = '/release_sonar';
+        window.location.href = '/release_sonar?q=start_polling';
     } catch (error) {
         document.body.innerHTML = `<div style="color: red; padding: 2rem;">Failed to exchange code</div>`;
         console.error('Polling error:', error);
@@ -145,5 +145,7 @@ if (window.location.pathname.includes('callback')) {
 } else {
     document.getElementById('login-button').addEventListener('click', initiateLogin);
 
-    startPolling(); //return if first session
+    if (new URLSearchParams(window.location.search).has("q")) {
+        startPolling();
+    }
 }
