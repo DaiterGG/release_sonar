@@ -88,7 +88,7 @@ async function handleCallback() {
         sessionStorage.setItem('spotify_auth_state', code);
         sessionStorage.setItem('spotify_expire_time', time.toString());
 
-        window.location.href = URI + '/release_sonar?q=start_polling';
+        window.location.href = URI + '?q=start_polling';
     } catch (error) {
         document.body.innerHTML = `<div style="color: red; padding: 2rem;">Failed to exchange code</div>`;
         console.error('Polling error:', error);
