@@ -146,7 +146,8 @@ if (window.location.pathname.includes('callback')) {
 } else {
     document.getElementById('login-button').addEventListener('click', initiateLogin);
 
-    if (new URLSearchParams(window.location.search).has("q")) {
+    params = new URLSearchParams(window.location.search);
+    if (params.has("q")) {
         startPolling();
     }
 }
