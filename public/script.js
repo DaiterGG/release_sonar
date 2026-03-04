@@ -9,6 +9,9 @@ const SERVER_URL_POLL = SERVER_URL + '/poll';
 const STATE_CHARSET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
 const STATE_LENGTH = 16;
 
+// Get the main container where dynamic content will be placed
+const app = document.getElementById('app');
+
 function generateRandomString(length, charset) {
     let result = '';
     const values = new Uint8Array(length);
@@ -31,8 +34,6 @@ function getQueryParams() {
 function initiateLogin() {
     const state = generateRandomString(STATE_LENGTH, STATE_CHARSET);
     sessionStorage.setItem('spotify_auth_state', state);
-
-    const storedState = sessionStorage.getItem('spotify_auth_state');
 
     const authUrl = new URL('https://accounts.spotify.com/authorize');
     authUrl.searchParams.set('response_type', 'code');
@@ -90,8 +91,8 @@ async function handleCallback() {
 
         window.location.href = URI + '?q=start_polling';
     } catch (error) {
-        document.body.innerHTML = `<div style="color: red; padding: 2rem;">Failed to exchange code</div>`;
-        console.error('Polling error:', error);
+        displayError('Failed to exchange code. Please try again.');
+        console.error('Exchange error:', error);
     }
 }
 
@@ -111,43 +112,46 @@ function startPolling() {
                     time: time
                 }),
             });
+
             if (!response.ok) {
-                throw new Error(`Backend returned ${response.status}\n Try Again`);
-                clearInterval(intervalId);
-                sessionStorage.removeItem('spotify_auth_state');
-                sessionStorage.removeItem('spotify_expire_time');
+                throw new Error(`Backend returned ${response.status} – Try again`);
             }
+
             const data = await response.json();
 
-            if (data.job_state == "PROGRESS" ) {
-                document.body.innerHTML = `<div style="color: red; padding: 2rem;">In Progress: ${data.job_result}</div>`;
+            if (data.job_state === "PROGRESS") {
+                app.innerHTML = `<div class="progress">⏳ In Progress: ${data.job_result}</div>`;
             }
-            if (data.job_state == "DONE" ) {
+            if (data.job_state === "DONE") {
                 clearInterval(intervalId);
                 sessionStorage.removeItem('spotify_auth_state');
                 sessionStorage.removeItem('spotify_expire_time');
-                document.body.innerHTML = `<div style="color: red; padding: 2rem;">Result: ${data.job_result}</div>`;
+                app.innerHTML = `<div class="result">✅ Result: ${data.job_result}</div>`;
             }
         } catch (error) {
             console.error('Polling error:', error);
-            // TODO: stop polling on persistent errors
+            app.innerHTML = `<div class="error">⚠️ Polling failed – check connection</div>`;
+            clearInterval(intervalId);
+            sessionStorage.removeItem('spotify_auth_state');
+            sessionStorage.removeItem('spotify_expire_time');
         }
     }, 10000);
 }
 
-
 function displayError(message) {
     console.error(message);
-    document.body.innerHTML = `<div style="color: red; padding: 2rem;">${message}</div>`;
+    app.innerHTML = `<div class="error">❌ ${message}</div>`;
 }
 
+// ----- Routing / page logic -----
 if (window.location.pathname.includes('callback')) {
     handleCallback();
 } else {
+    // index page
     document.getElementById('login-button').addEventListener('click', initiateLogin);
 
-    params = new URLSearchParams(window.location.search);
-    if (params.has("q")) {
+    const params = new URLSearchParams(window.location.search);
+    if (params.has("q") && params.get("q") === "start_polling") {
         startPolling();
     }
 }
