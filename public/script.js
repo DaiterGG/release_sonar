@@ -9,16 +9,7 @@ const STATE_CHARSET =
   "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
 const STATE_LENGTH = 16;
 const app = document.getElementById("app");
-// UI elements
-const loginBtn = document.getElementById("login-button");
-const searchBtn = document.getElementById("search-button");
-const minTracksInput = document.getElementById("minTracks");
-const minTracksSpan = document.getElementById("minTracksValue");
-// Update displayed slider value
-minTracksInput.addEventListener("input", () => {
-  minTracksSpan.textContent = minTracksInput.value;
-});
-// Helper: generate random string (unchanged)
+// Helper: generate random string
 function generateRandomString(length, charset) {
   let result = "";
   const values = new Uint8Array(length);
@@ -36,15 +27,7 @@ function getQueryParams() {
   }
   return obj;
 }
-// Enable search button if user is logged in
-function updateSearchButtonState() {
-  if (sessionStorage.getItem("spotify_logged_in") === "true") {
-    searchBtn.disabled = false;
-  } else {
-    searchBtn.disabled = true;
-  }
-}
-// Login flow (unchanged except redirect after success)
+// Login flow
 function initiateLogin() {
   const state = generateRandomString(STATE_LENGTH, STATE_CHARSET);
   sessionStorage.setItem("spotify_auth_state", state);
@@ -94,24 +77,24 @@ async function handleCallback() {
     sessionStorage.setItem("spotify_auth_state", code);
     sessionStorage.setItem("spotify_expire_time", time.toString());
     sessionStorage.setItem("spotify_logged_in", "true");
-    // Redirect back to main page WITHOUT auto-polling
+    // Redirect back to main page
     window.location.href = URI;
   } catch (error) {
     displayError("Failed to exchange code. Please try again.");
     console.error("Exchange error:", error);
   }
 }
-// Start polling when search button is clicked
+// Polling function (triggered by search button)
 async function startPolling() {
   const code = sessionStorage.getItem("spotify_auth_state");
   const time = sessionStorage.getItem("spotify_expire_time");
-  const minTracks = minTracksInput.value; // get current slider value
+  // Get current slider value (if available – on main page we have it)
+  const minTracksInput = document.getElementById("minTracks");
+  const minTracks = minTracksInput ? minTracksInput.value : "2";
   if (!code || !time) {
     displayError("Missing login data. Please log in again.");
     return;
   }
-  // Save minTracks in sessionStorage for potential restarts
-  sessionStorage.setItem("spotify_min_tracks", minTracks);
   // Show loading spinner
   app.innerHTML = `
     <div class="spinner"></div>
@@ -125,7 +108,7 @@ async function startPolling() {
         body: JSON.stringify({
           code,
           time,
-          min_tracks: minTracks, // send slider value to backend
+          min_tracks: minTracks,
         }),
       });
       if (!response.ok) {
@@ -138,12 +121,9 @@ async function startPolling() {
       }
       if (data.job_state === "DONE") {
         clearInterval(intervalId);
-        // Clear session data (optional – you may keep login flag)
         sessionStorage.removeItem("spotify_auth_state");
         sessionStorage.removeItem("spotify_expire_time");
-        sessionStorage.removeItem("spotify_min_tracks");
-        // Keep spotify_logged_in = true so search button stays enabled
-        // Parse and render tracks
+        // Keep login flag so search button stays enabled
         try {
           const resultObj = JSON.parse(data.job_result);
           renderTracks(resultObj.tracks);
@@ -159,19 +139,17 @@ async function startPolling() {
       clearInterval(intervalId);
       sessionStorage.removeItem("spotify_auth_state");
       sessionStorage.removeItem("spotify_expire_time");
-      sessionStorage.removeItem("spotify_min_tracks");
-      // Do NOT clear login flag – user can try again
     }
   }, 10000);
 }
-// Render tracks (unchanged – fixed regex spacing warning)
+// Render tracks
 function renderTracks(tracks) {
   if (!tracks || tracks.length === 0) {
     app.innerHTML = `<div class="result">No new tracks found.</div>`;
     return;
   }
   const trackItems = tracks.map((track) => {
-    // Clean up trailing comma and space (regex with space is intentional)
+    // Clean up trailing comma and space (intentional spaces)
     const artists = track.artists.replace(/, $/, "").replace(/,  /g, ", ");
     return `
       <li class="track-item">
@@ -186,7 +164,7 @@ function renderTracks(tracks) {
     <ul class="track-list">${trackItems}</ul>
   `;
 }
-// Simple escape (unchanged)
+// Simple escape
 function escapeHTML(str) {
   return str.replace(/[&<>"]/g, function (m) {
     if (m === "&") return "&amp;";
@@ -200,13 +178,31 @@ function displayError(message) {
   console.error(message);
   app.innerHTML = `<div class="error">❌ ${message}</div>`;
 }
-// ----- Routing / page logic -----
+// ----- Routing -----
 if (window.location.pathname.includes("callback")) {
   handleCallback();
 } else {
-  // Main page
+  // ----- Main page setup -----
+  const loginBtn = document.getElementById("login-button");
+  const searchBtn = document.getElementById("search-button");
+  const minTracksInput = document.getElementById("minTracks");
+  const minTracksSpan = document.getElementById("minTracksValue");
+  // Update displayed slider value
+  if (minTracksInput && minTracksSpan) {
+    minTracksInput.addEventListener("input", () => {
+      minTracksSpan.textContent = minTracksInput.value;
+    });
+  }
+  // Enable/disable search button based on login status
+  function updateSearchButtonState() {
+    if (sessionStorage.getItem("spotify_logged_in") === "true") {
+      searchBtn.disabled = false;
+    } else {
+      searchBtn.disabled = true;
+    }
+  }
   updateSearchButtonState();
+  // Attach event listeners
   loginBtn.addEventListener("click", initiateLogin);
   searchBtn.addEventListener("click", startPolling);
-  // If user returns after login, the search button becomes enabled (no auto-poll)
 }
