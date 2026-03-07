@@ -9,6 +9,16 @@ const STATE_CHARSET =
   "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
 const STATE_LENGTH = 16;
 const app = document.getElementById("app");
+// UI elements
+const loginBtn = document.getElementById("login-button");
+const searchBtn = document.getElementById("search-button");
+const minTracksInput = document.getElementById("minTracks");
+const minTracksSpan = document.getElementById("minTracksValue");
+// Update displayed slider value
+minTracksInput.addEventListener("input", () => {
+  minTracksSpan.textContent = minTracksInput.value;
+});
+// Helper: generate random string (unchanged)
 function generateRandomString(length, charset) {
   let result = "";
   const values = new Uint8Array(length);
@@ -26,10 +36,18 @@ function getQueryParams() {
   }
   return obj;
 }
+// Enable search button if user is logged in
+function updateSearchButtonState() {
+  if (sessionStorage.getItem("spotify_logged_in") === "true") {
+    searchBtn.disabled = false;
+  } else {
+    searchBtn.disabled = true;
+  }
+}
+// Login flow (unchanged except redirect after success)
 function initiateLogin() {
   const state = generateRandomString(STATE_LENGTH, STATE_CHARSET);
   sessionStorage.setItem("spotify_auth_state", state);
-
   const authUrl = new URL("https://accounts.spotify.com/authorize");
   authUrl.searchParams.set("response_type", "code");
   authUrl.searchParams.set("client_id", CLIENT_ID);
@@ -38,14 +56,13 @@ function initiateLogin() {
   authUrl.searchParams.set("state", state);
   window.location.href = authUrl.toString();
 }
+// Callback after Spotify redirect
 async function handleCallback() {
   const params = getQueryParams();
-
   if (params.error) {
     displayError(`Spotify returned an error: ${params.error}`);
     return;
   }
-
   const storedState = sessionStorage.getItem("spotify_auth_state");
   if (!storedState) {
     displayError(
@@ -57,16 +74,13 @@ async function handleCallback() {
     displayError("State mismatch. Possible CSRF attack.");
     return;
   }
-
   sessionStorage.removeItem("spotify_auth_state");
   if (!params.code) {
     displayError("No authorization code returned.");
     return;
   }
-
   const code = params.code;
   const time = Date.now();
-
   try {
     const response = await fetch(SERVER_URL, {
       method: "POST",
@@ -76,51 +90,60 @@ async function handleCallback() {
     if (!response.ok) {
       throw new Error(`Backend returned ${response.status}`);
     }
-
+    // Store credentials and login flag
     sessionStorage.setItem("spotify_auth_state", code);
     sessionStorage.setItem("spotify_expire_time", time.toString());
-
-    window.location.href = URI + "?q=start_polling";
+    sessionStorage.setItem("spotify_logged_in", "true");
+    // Redirect back to main page WITHOUT auto-polling
+    window.location.href = URI;
   } catch (error) {
     displayError("Failed to exchange code. Please try again.");
     console.error("Exchange error:", error);
   }
 }
-function startPolling() {
+// Start polling when search button is clicked
+async function startPolling() {
   const code = sessionStorage.getItem("spotify_auth_state");
   const time = sessionStorage.getItem("spotify_expire_time");
-
-  if (!code || !time) return;
-
-  // Show a loading spinner immediately
+  const minTracks = minTracksInput.value; // get current slider value
+  if (!code || !time) {
+    displayError("Missing login data. Please log in again.");
+    return;
+  }
+  // Save minTracks in sessionStorage for potential restarts
+  sessionStorage.setItem("spotify_min_tracks", minTracks);
+  // Show loading spinner
   app.innerHTML = `
-        <div class="spinner"></div>
-        <p class="progress">Loading your new releases…</p>
-    `;
+    <div class="spinner"></div>
+    <p class="progress">Loading your new releases…</p>
+  `;
   const intervalId = setInterval(async () => {
     try {
       const response = await fetch(SERVER_URL_POLL, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ code, time }),
+        body: JSON.stringify({
+          code,
+          time,
+          min_tracks: minTracks, // send slider value to backend
+        }),
       });
       if (!response.ok) {
         throw new Error(`Backend returned ${response.status}`);
       }
-
       const data = await response.json();
-
       if (data.job_state === "PROGRESS") {
         app.innerHTML =
           `<div class="progress">⏳ In Progress: ${data.job_result}</div>`;
       }
-
       if (data.job_state === "DONE") {
         clearInterval(intervalId);
+        // Clear session data (optional – you may keep login flag)
         sessionStorage.removeItem("spotify_auth_state");
         sessionStorage.removeItem("spotify_expire_time");
-
-        // Parse the JSON result and render tracks
+        sessionStorage.removeItem("spotify_min_tracks");
+        // Keep spotify_logged_in = true so search button stays enabled
+        // Parse and render tracks
         try {
           const resultObj = JSON.parse(data.job_result);
           renderTracks(resultObj.tracks);
@@ -136,33 +159,34 @@ function startPolling() {
       clearInterval(intervalId);
       sessionStorage.removeItem("spotify_auth_state");
       sessionStorage.removeItem("spotify_expire_time");
+      sessionStorage.removeItem("spotify_min_tracks");
+      // Do NOT clear login flag – user can try again
     }
   }, 10000);
 }
+// Render tracks (unchanged – fixed regex spacing warning)
 function renderTracks(tracks) {
   if (!tracks || tracks.length === 0) {
     app.innerHTML = `<div class="result">No new tracks found.</div>`;
     return;
   }
-
   const trackItems = tracks.map((track) => {
-    // Clean up trailing comma and space from artists string
+    // Clean up trailing comma and space (regex with space is intentional)
     const artists = track.artists.replace(/, $/, "").replace(/,  /g, ", ");
     return `
-            <li class="track-item">
-                <div class="track-name">${escapeHTML(track.name)}</div>
-                <div class="track-artists">${escapeHTML(artists)}</div>
-                <div class="track-date">${escapeHTML(track.date)}</div>
-            </li>
-        `;
-  }).join("");
-
-  app.innerHTML = `
-        <h2 style="margin-bottom: 1rem; color: #fff;">🎵 New Releases</h2>
-        <ul class="track-list">${trackItems}</ul>
+      <li class="track-item">
+        <div class="track-name">${escapeHTML(track.name)}</div>
+        <div class="track-artists">${escapeHTML(artists)}</div>
+        <div class="track-date">${escapeHTML(track.date)}</div>
+      </li>
     `;
+  }).join("");
+  app.innerHTML = `
+    <h2 style="margin-bottom: 1rem; color: #fff;">🎵 New Releases</h2>
+    <ul class="track-list">${trackItems}</ul>
+  `;
 }
-// Simple escape to prevent XSS (though data from API is probably safe)
+// Simple escape (unchanged)
 function escapeHTML(str) {
   return str.replace(/[&<>"]/g, function (m) {
     if (m === "&") return "&amp;";
@@ -180,14 +204,9 @@ function displayError(message) {
 if (window.location.pathname.includes("callback")) {
   handleCallback();
 } else {
-  // index page
-  document.getElementById("login-button").addEventListener(
-    "click",
-    initiateLogin,
-  );
-
-  const params = new URLSearchParams(window.location.search);
-  if (params.has("q") && params.get("q") === "start_polling") {
-    startPolling();
-  }
+  // Main page
+  updateSearchButtonState();
+  loginBtn.addEventListener("click", initiateLogin);
+  searchBtn.addEventListener("click", startPolling);
+  // If user returns after login, the search button becomes enabled (no auto-poll)
 }
