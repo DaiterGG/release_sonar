@@ -9,7 +9,6 @@ const STATE_CHARSET =
   "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
 const STATE_LENGTH = 16;
 const app = document.getElementById("app");
-// Helper: generate random string
 function generateRandomString(length, charset) {
   let result = "";
   const values = new Uint8Array(length);
@@ -27,7 +26,6 @@ function getQueryParams() {
   }
   return obj;
 }
-// Login flow
 function initiateLogin() {
   const state = generateRandomString(STATE_LENGTH, STATE_CHARSET);
   sessionStorage.setItem("spotify_auth_state", state);
@@ -39,7 +37,6 @@ function initiateLogin() {
   authUrl.searchParams.set("state", state);
   window.location.href = authUrl.toString();
 }
-// Callback after Spotify redirect
 async function handleCallback() {
   const params = getQueryParams();
   if (params.error) {
@@ -75,11 +72,9 @@ async function handleCallback() {
     if (!response.ok) {
       throw new Error(`Backend returned ${response.status}`);
     }
-    // Store credentials and login flag
     sessionStorage.setItem("spotify_auth_state", code);
     sessionStorage.setItem("spotify_expire_time", time.toString());
     sessionStorage.setItem("spotify_logged_in", "true");
-    // Redirect back to main page
     window.location.href = URI;
   } catch (error) {
     displayError("Failed to exchange code. Please try again.");
@@ -162,7 +157,6 @@ function renderTracks(tracks) {
     <ul class="track-list">${trackItems}</ul>
   `;
 }
-// Simple escape
 function escapeHTML(str) {
   return str.replace(/[&<>"]/g, function (m) {
     if (m === "&") return "&amp;";
@@ -180,18 +174,15 @@ function displayError(message) {
 if (window.location.pathname.includes("callback")) {
   handleCallback();
 } else {
-  // ----- Main page setup -----
   const loginBtn = document.getElementById("login-button");
   const searchBtn = document.getElementById("search-button");
   const minTracksInput = document.getElementById("minTracks");
   const minTracksSpan = document.getElementById("minTracksValue");
-  // Update displayed slider value
   if (minTracksInput && minTracksSpan) {
     minTracksInput.addEventListener("input", () => {
       minTracksSpan.textContent = minTracksInput.value;
     });
   }
-  // Enable/disable search button based on login status
   function updateSearchButtonState() {
     if (sessionStorage.getItem("spotify_logged_in") === "true") {
       searchBtn.disabled = false;

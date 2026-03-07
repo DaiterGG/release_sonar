@@ -4,44 +4,56 @@ import os
 
 sqs = boto3.client('sqs')
 dynamodb = boto3.resource('dynamodb')
-table = dynamodb.Table('rust-cache')
+table = dynamodb.Table('rust_cache')
 
 def lambda_handler_poll(event, _):
-    code_time = json.loads(event.get("body","error receiving user code"))
-    print("code and time is:")
+    try:
+        code_time = json.loads(event.get("body","error receiving user code"))
+        time = int(code_time['time'])
+        code = code_time['code']
+        print(f"code and time is: {time}, {code}")
 
-    response = table.get_item(Key={
-        "job_id": code_time['code'],
-        "job_stamp": code_time['time']
-        })
-    try :
+        response = table.get_item(Key={
+            "job_auth_code": code,
+            "job_expire_time": time
+            })
+        print(f"response is {response}")
         item = response.get('Item')
-        print(item)
-    except Exception as e:
-        print(f"Error getting item: {e}\n assuming entry is not created yet")
+        print(f"item is {item}")
+        if item == None:
+            return {
+                "statusCode": 200,
+                "headers": {
+                    "Access-Control-Allow-Origin": "https://daitergg.github.io"
+                },
+                "body":json.dumps({"job_status": "PROGRESS", "job_result": "0"})
+            }
+        item['job_expire_time'] = str(item['job_expire_time'])
+
         return {
             "statusCode": 200,
             "headers": {
                 "Access-Control-Allow-Origin": "https://daitergg.github.io"
             },
-            "body":json.dumps({"job_status": "PROGRESS", "job_result": "0"})
+            "body":json.dumps(item)
+        }
+    except Exception as e:
+        return {
+            "statusCode": 500,
+            "headers": {
+                "Access-Control-Allow-Origin": "https://daitergg.github.io"
+            },
+            "body":str(e)
         }
 
-    return {
-        "statusCode": 200,
-        "headers": {
-            "Access-Control-Allow-Origin": "https://daitergg.github.io"
-        },
-        "body":json.dumps(item)
-    }
 def lambda_handler_post(event, _):
-    code_time = event.get("body","error receiving user code")
-    print("code and time is:")
-    print(code_time)
+    post_info = event.get("body","error receiving user code")
+    print("post info is:")
+    print(post_info)
     queue_url = os.environ['QUEUE_URL']
     response = sqs.send_message(
         QueueUrl=queue_url,
-        MessageBody=code_time,
+        MessageBody=post_info,
         MessageGroupId='invoke',
         MessageDeduplicationId='invoke',
     )

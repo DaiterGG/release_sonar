@@ -31,6 +31,10 @@
                             {
                                 "name": "LAUNCH_PARAM_USER_CODE",
                                 "value": "$.body.code"
+                            },
+                            {
+                                "name": "LAUNCH_PARAM_MIN_TRACKS",
+                                "value": "$.body.min_tracks"
                             }
                         ]
                     }

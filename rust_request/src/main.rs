@@ -20,10 +20,13 @@ async fn main() -> Result<()> {
 
     let code = env::var("LAUNCH_PARAM_USER_CODE").expect("invalid init code from lambda");
     let time = env::var("LAUNCH_PARAM_TIME").expect("invalid init time from lambda");
+    let num = env::var("LAUNCH_PARAM_MIN_TRACKS").expect("invalid init num from lambda");
+    println!("num: {num}");
+    let num: i32 = num.parse().expect("not a number from lambda");
     println!("code received :{code}");
     let db = DBManager::init(&code, time).await;
 
-    let res = service::new_releases_list(3, code, &db).await?;
+    let res = service::new_releases_list(num, code, &db).await?;
 
     println!("result sending :{}", res);
     db.send_result(res).await?;
