@@ -65,10 +65,12 @@ async function handleCallback() {
   const code = params.code;
   const time = Date.now();
   try {
+    const minTracksInput = document.getElementById("minTracks");
+    const minTracks = minTracksInput ? minTracksInput.value : "2";
     const response = await fetch(SERVER_URL, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ code, time }),
+      body: JSON.stringify({ code, time, min_tracks: minTracks }),
     });
     if (!response.ok) {
       throw new Error(`Backend returned ${response.status}`);
@@ -88,17 +90,14 @@ async function handleCallback() {
 async function startPolling() {
   const code = sessionStorage.getItem("spotify_auth_state");
   const time = sessionStorage.getItem("spotify_expire_time");
-  // Get current slider value (if available – on main page we have it)
-  const minTracksInput = document.getElementById("minTracks");
-  const minTracks = minTracksInput ? minTracksInput.value : "2";
   if (!code || !time) {
     displayError("Missing login data. Please log in again.");
     return;
   }
-  // Show loading spinner
   app.innerHTML = `
     <div class="spinner"></div>
     <p class="progress">Loading your new releases…</p>
+    <p class="progress">This could take a couple minutes</p>
   `;
   const intervalId = setInterval(async () => {
     try {
@@ -108,7 +107,6 @@ async function startPolling() {
         body: JSON.stringify({
           code,
           time,
-          min_tracks: minTracks,
         }),
       });
       if (!response.ok) {
